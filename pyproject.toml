@@ -1,0 +1,9 @@
+[project]
+name = "trial-dbt-charts"
+version = "0.1.0"
+requires-python = ">=3.10,<3.14"
+dependencies = [
+    "dbt-core>=1.8,<2",
+    "dbt-duckdb>=1.10,<2",
+    "pyyaml>=6.0",
+]

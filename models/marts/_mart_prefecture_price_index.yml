@@ -1,0 +1,18 @@
+version: 2
+
+models:
+  - name: mart_prefecture_price_index
+    description: "全国・47都道府県 × 10大費目 × 年 の消費者物価地域差指数（全国平均＝100）"
+    columns:
+      - name: year
+        description: "年"
+      - name: area_code
+        description: "地域コード（00000=全国、01000〜47000=都道府県）"
+      - name: area_name
+        description: "地域名"
+      - name: expense_category_code
+        description: "10大費目コード（00010=総合）"
+      - name: expense_category_name
+        description: "10大費目名"
+      - name: price_index
+        description: "地域差指数（全国平均＝100）"

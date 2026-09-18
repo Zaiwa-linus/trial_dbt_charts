@@ -1,0 +1,171 @@
+title: 都道府県別 物価水準（消費者物価地域差指数）
+source: estat
+
+variables:
+  prefecture:
+    input: select
+    label: 都道府県
+    options:
+      query: prefecture_options
+    default: 東京都
+    required: true
+  category:
+    input: select
+    label: 費目
+    options:
+      query: category_options
+    default: 総合
+    required: true
+
+queries:
+  prefecture_options: |
+    SELECT DISTINCT area_name, area_code
+    FROM {{ ref('mart_prefecture_price_index') }}
+    WHERE area_code <> '00000'
+    ORDER BY area_code
+
+  category_options: |
+    SELECT DISTINCT expense_category_name, expense_category_code
+    FROM {{ ref('mart_prefecture_price_index') }}
+    ORDER BY expense_category_code
+
+  # 選択した費目について、最新年の指数・前年差・47都道府県中の順位
+  kpis: |
+    WITH base AS (
+      SELECT *
+      FROM {{ ref('mart_prefecture_price_index') }}
+      WHERE {{ filter('expense_category_name', category) }}
+        AND area_code <> '00000'
+    ),
+    latest AS (
+      SELECT
+        area_name,
+        price_index,
+        price_index - LAG(price_index) OVER (PARTITION BY area_code ORDER BY year) AS price_index_delta,
+        RANK() OVER (PARTITION BY year ORDER BY price_index DESC) AS price_rank,
+        year
+      FROM base
+      QUALIFY year = (SELECT MAX(year) FROM base)
+    )
+    SELECT price_index, price_index_delta, price_rank, year
+    FROM latest
+    WHERE {{ filter('area_name', prefecture) }}
+
+  # 選択した都道府県と全国の推移
+  trend: |
+    SELECT year, area_name, price_index
+    FROM {{ ref('mart_prefecture_price_index') }}
+    WHERE {{ filter('expense_category_name', category) }}
+      AND ({{ filter('area_name', prefecture) }} OR area_code = '00000')
+    ORDER BY year, area_code
+
+  # 最新年の47都道府県ランキング
+  ranking: |
+    SELECT area_name, round(price_index - 100, 1) AS diff_from_national
+    FROM {{ ref('mart_prefecture_price_index') }}
+    WHERE {{ filter('expense_category_name', category) }}
+      AND area_code <> '00000'
+      AND year = (SELECT MAX(year) FROM {{ ref('mart_prefecture_price_index') }})
+    ORDER BY price_index DESC
+
+  # 選択した都道府県の費目別内訳（最新年と前年差）
+  breakdown: |
+    WITH pref AS (
+      SELECT
+        expense_category_code,
+        expense_category_name,
+        year,
+        price_index,
+        price_index - LAG(price_index) OVER (PARTITION BY area_code, expense_category_code ORDER BY year) AS price_index_delta
+      FROM {{ ref('mart_prefecture_price_index') }}
+      WHERE {{ filter('area_name', prefecture) }}
+    )
+    SELECT expense_category_name, price_index, price_index_delta
+    FROM pref
+    WHERE year = (SELECT MAX(year) FROM pref)
+    ORDER BY expense_category_code
+
+charts:
+  k_index:
+    label: 地域差指数（最新年）
+    query: kpis
+    type: kpi
+    value: price_index
+    style:
+      value:
+        format: ",.1f"
+    support:
+      value: price_index_delta
+      label: 前年差
+      format: "+,.1f"
+
+  k_rank:
+    label: 47都道府県中の順位（高い順）
+    query: kpis
+    type: kpi
+    value: price_rank
+    style:
+      value:
+        format: integer
+
+  trend_chart:
+    title: 推移（全国平均＝100）
+    query: trend
+    type: line
+    x: year
+    y: price_index
+    color: area_name
+    height: 320
+    style:
+      endpoint_labels:
+        visible: false
+      legend:
+        position: top
+        title:
+          visible: false
+
+  ranking_chart:
+    title: 都道府県ランキング：全国平均との差（最新年、指数−100）
+    query: ranking
+    type: bar
+    x: area_name
+    y: diff_from_national
+    sort:
+      by: diff_from_national
+      order: desc
+    height: 300
+    style:
+      orientation: vertical
+      axis_x:
+        labels:
+          angle: -90
+
+  breakdown_table:
+    title: 費目別の内訳（最新年）
+    query: breakdown
+    type: table
+    style:
+      columns:
+        expense_category_name:
+          label: 費目
+        price_index:
+          label: 地域差指数
+          format: ",.1f"
+          align: right
+          scale:
+            background:
+              palette: dbt-seq-blue
+              domain: data
+        price_index_delta:
+          label: 前年差
+          format: "+,.1f"
+          align: right
+
+rows:
+  - cols: [k_index, k_rank]
+  - cols:
+      - width: "60%"
+        rows: [trend_chart]
+      - width: "40%"
+        rows: [breakdown_table]
+  - ranking_chart

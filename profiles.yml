@@ -1,0 +1,6 @@
+trial_dbt_charts:
+  target: dev
+  outputs:
+    dev:
+      type: duckdb
+      path: target/dev.duckdb

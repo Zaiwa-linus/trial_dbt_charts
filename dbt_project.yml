@@ -1,0 +1,20 @@
+name: 'trial_dbt_charts'
+version: '1.0.0'
+
+profile: 'trial_dbt_charts'
+
+model-paths: ["models"]
+seed-paths: ["seeds"]
+macro-paths: ["macros"]
+test-paths: ["tests"]
+
+clean-targets:
+  - "target"
+  - "dbt_packages"
+
+models:
+  trial_dbt_charts:
+    staging:
+      +materialized: view
+    marts:
+      +materialized: table

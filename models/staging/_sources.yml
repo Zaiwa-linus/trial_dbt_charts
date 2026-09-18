@@ -1,0 +1,10 @@
+version: 2
+
+sources:
+  - name: estat
+    description: "e-Stat API から取得した統計データ（CSV）"
+    tables:
+      - name: "0003441258"
+        description: "小売物価統計調査 - 10大費目別消費者物価地域差指数（全国平均＝100）"
+        meta:
+          external_location: "read_csv('data/0003441258/0003441258.csv', nullstr='-', all_varchar=true)"

@@ -1,0 +1,5 @@
+sources:
+  estat:
+    type: dbt_profile
+    profile: trial_dbt_charts
+    target: dev

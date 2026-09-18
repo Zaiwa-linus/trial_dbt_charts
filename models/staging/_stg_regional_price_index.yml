@@ -1,0 +1,12 @@
+version: 2
+
+models:
+  - name: stg_regional_price_index
+    description: "消費者物価地域差指数を列名を英語化・型変換したもの"
+    columns:
+      - name: expense_category_code
+        data_tests: [not_null]
+      - name: area_code
+        data_tests: [not_null]
+      - name: year
+        data_tests: [not_null]

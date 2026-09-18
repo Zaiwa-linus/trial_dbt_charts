@@ -1,0 +1,42 @@
+name: Deploy to GitHub Pages
+
+on:
+  push:
+    branches: main
+  workflow_dispatch:
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+    permissions:
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: astral-sh/setup-uv@v6
+        with:
+          python-version: '3.12'
+
+      # --- dbt build（data/ の CSV はコミット済みなので e-Stat API は叩かない）---
+      - name: Install dependencies
+        run: |
+          uv sync
+          uv tool install dbt-charts
+          echo "$(uv tool dir --bin)" >> "$GITHUB_PATH"
+      - name: Run dbt build
+        run: uv run dbt build --profiles-dir .
+
+      # --- dbt Charts で静的 HTML を生成 ---
+      - name: Build site
+        run: ./scripts/build_site.sh
+
+      # --- Deploy to GitHub Pages ---
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: site
+      - id: deployment
+        uses: actions/deploy-pages@v4
